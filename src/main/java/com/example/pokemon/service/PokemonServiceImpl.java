@@ -1,0 +1,24 @@
+package com.example.pokemon.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.pokemon.collaborator.PokemonCollaborator;
+import com.example.pokemon.model.Pokemon;
+
+
+@Service
+public class PokemonServiceImpl implements PokemonService {
+
+    
+    private PokemonCollaborator pokemonCollab;
+
+    @Autowired
+    public PokemonServiceImpl(PokemonCollaborator pokemonCollab){
+        this.pokemonCollab = pokemonCollab;
+    }
+
+    public Pokemon getPokemon(String name){
+        return pokemonCollab.getPokemonByNameOrID(name);
+    }
+}
