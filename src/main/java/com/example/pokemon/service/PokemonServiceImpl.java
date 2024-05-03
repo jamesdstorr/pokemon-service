@@ -10,7 +10,6 @@ import com.example.pokemon.model.Pokemon;
 @Service
 public class PokemonServiceImpl implements PokemonService {
 
-    
     private PokemonCollaborator pokemonCollab;
 
     @Autowired
@@ -20,5 +19,9 @@ public class PokemonServiceImpl implements PokemonService {
 
     public Pokemon getPokemon(String name){
         return pokemonCollab.getPokemonByNameOrID(name);
+    }
+
+    public Pokemon evolvePokemon(String name){
+        return pokemonCollab.evolvePokemon(name);
     }
 }

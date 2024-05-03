@@ -1,63 +1,76 @@
 package com.example.pokemon.collaborator;
 
-
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.pokemon.model.Pokemon;
+import com.example.pokemon.model.PokemonSpecies;
+import com.example.pokemon.model.Evolution.EvolutionPokemonSpecies;
+import com.example.pokemon.model.Evolution.EvolutionResponse;
+import com.example.pokemon.model.Evolution.EvolvesTo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+
+
+
+
 
 @Service
 public class PokemonCollaborator {
-    
-    private final RestTemplate restTemplate = new RestTemplate();
 
-    public Pokemon getPokemonByNameOrID(String idOrName){
+    public EvolutionPokemonSpecies getNextEvolution(String pokemonName, EvolvesTo evolvesTo ){
+
+        if(evolvesTo.getSpecies().getName().equalsIgnoreCase(pokemonName)){
+            if(!evolvesTo.getEvolves_to().isEmpty()){
+                return evolvesTo.getEvolves_to().get(0).getSpecies();
+            }
+            return null;
+        }
+        else{
+            for(EvolvesTo nextEvolvesTo : evolvesTo.getEvolves_to()){
+                EvolutionPokemonSpecies pokemonSpecies = getNextEvolution(pokemonName, nextEvolvesTo );
+                if (pokemonSpecies != null) {
+                    return pokemonSpecies;
+                }
+            }
+        }
+        return null;
+    }
+
+
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    public Pokemon getPokemonByNameOrID(String idOrName) {
         String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
         return restTemplate.getForObject(url, Pokemon.class);
     }
 
-    public Pokemon evolvePokemon(String idOrName){
-        String speciesUrl = "https://pokeapi.co/api/v2/pokemon-species/" + idOrName;
-        PokemonSpecies species = restTemplate.getForObject(speciesUrl, PokemonSpecies.class);
+    public Pokemon evolvePokemon(String idOrName) {
 
-        List<PokemonEvolution> evolutions = new ArrayList<>();
-        for (PokemonEvolution evolution : species.getEvolutions()){
-            evolutions.add(restTemplate.getForObject("https://pokeapi.co/api/v2/evolution/" + evolution.getId(), PokemonEvolution.class));
+        PokemonSpecies pokemonSpecies = restTemplate
+                .getForObject("https://pokeapi.co/api/v2/pokemon-species/" + idOrName, PokemonSpecies.class);
+
+        final String pokemonName = pokemonSpecies.getName();
+ 
+        EvolutionResponse evolutionResponse = restTemplate.getForObject(pokemonSpecies.getEvolution_chain().getUrl(),
+                EvolutionResponse.class);
+
+        if(evolutionResponse!=null && evolutionResponse.getChain().getSpecies().getName().equals(pokemonName)){
+            EvolutionPokemonSpecies nextEvolution = evolutionResponse.getChain().getEvolves_to().get(0).getSpecies();
+            System.out.println(nextEvolution.getName());
+            return getPokemonByNameOrID(nextEvolution.getName());
+        }
+        else {
+            EvolvesTo evolvesTo = evolutionResponse.getChain().getEvolves_to().get(0);
+            String nextEvolution = getNextEvolution(pokemonName, evolvesTo).getName();
+            System.out.println(nextEvolution);
+            return getPokemonByNameOrID(nextEvolution);
         }
 
-        return evolutions.stream()
-                .filter(PokemonEvolution::isChain)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No chain found for " + idOrName))
-                .getTarget();
     }
 
-
-        // This method gets a Pokémon object from the PokeAPI using either its name or ID.
-        // If an invalid name or ID is passed, it throws a RuntimeException.
-        public Pokemon getPokemonByNameOrID(String idOrName){
-            String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
-            return restTemplate.getForObject(url, Pokemon.class);
-        }
-
-        // This method gets a Pokémon object from the PokeAPI using its name or ID.
-        // If an invalid name or ID is passed, it throws a RuntimeException.
-        public Pokemon evolvePokemon(String idOrName){
-            String speciesUrl = "https://pokeapi.co/api/v2/pokemon-species/" + idOrName;
-            PokemonSpecies species = restTemplate.getForObject(speciesUrl, PokemonSpecies.class);
-
-            List<PokemonEvolution> evolutions = new ArrayList<>();
-            for (PokemonEvolution evolution : species.getEvolutions()){
-                evolutions.add(restTemplate.getForObject("https://pokeapi.co/api/v2/evolution/" + evolution.getId(), PokemonEvolution.class));
-            }
-
-            return evolutions.stream()
-                    .filter(PokemonEvolution::isChain)
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No chain found for " + idOrName))
-                    .getTarget();
-        }
-
-        //TODO Something Something Something 
-
 }
+
+
