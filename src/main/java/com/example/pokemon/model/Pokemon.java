@@ -9,6 +9,6 @@ public class Pokemon {
     private int id;
     private int height;
     private int weight;
-    private String base_experience;
+    private int base_experience;
     private List<AbilityItem> abilities;
 }
