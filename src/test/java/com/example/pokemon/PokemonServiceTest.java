@@ -1,5 +1,7 @@
 package com.example.pokemon;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,32 +10,26 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.web.client.RestTemplate;
 
 import com.example.pokemon.collaborator.PokemonCollaborator;
 import com.example.pokemon.model.Pokemon;
-
-import static org.junit.Assert.*;
+import com.example.pokemon.service.PokemonServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
-@SpringBootTest
-public class PokemonCollaboratorTest {
-
+public class PokemonServiceTest {
     @Mock
-    private RestTemplate restTemplate;
-
-    @InjectMocks
     private PokemonCollaborator pokemonCollaborator;
 
+    @InjectMocks
+    private PokemonServiceImpl pokemonService;
+  
     @Before
     public void setup() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void testGetPokemonByNameOrID() throws Exception {
-        // Given
+    public void givenMockingIsDone_whenGetPokemonIsCalled_ShouldReturnPokemon() throws Exception {
         String idOrName = "pikachu";
         Pokemon expectedPokemon = new Pokemon();
         expectedPokemon.setName("pikachu");
@@ -42,13 +38,11 @@ public class PokemonCollaboratorTest {
         expectedPokemon.setWeight(60);
         expectedPokemon.setBase_experience(150);
 
-        // When
         Mockito
-            .when(restTemplate.getForObject("https://pokeapi.co/api/v2/pokemon/" + idOrName, Pokemon.class))
-                    .thenReturn(expectedPokemon);
+                .when(pokemonCollaborator.getPokemonByNameOrID(idOrName))
+                .thenReturn(expectedPokemon);
 
-        // Then
-        assertEquals(expectedPokemon.getName(), pokemonCollaborator.getPokemonByNameOrID(idOrName).getName());
+        assertEquals(expectedPokemon.getName(), pokemonService.getPokemon(idOrName).getName());
     }
 
 }
