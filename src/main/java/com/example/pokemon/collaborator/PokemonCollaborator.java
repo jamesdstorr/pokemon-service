@@ -1,5 +1,7 @@
 package com.example.pokemon.collaborator;
 
+
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -10,8 +12,13 @@ import com.example.pokemon.model.Evolution.EvolutionResponse;
 import com.example.pokemon.model.Evolution.EvolvesTo;
 
 
-@Service
+@Component
 public class PokemonCollaborator {
+    private final RestTemplate restTemplate;
+
+    public PokemonCollaborator(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     public EvolutionPokemonSpecies getNextEvolution(String pokemonName, EvolvesTo evolvesTo) {
 
@@ -35,7 +42,6 @@ public class PokemonCollaborator {
         return null;
     }
 
-    private final RestTemplate restTemplate = new RestTemplate();
 
     public Pokemon getPokemonByNameOrID(String idOrName) {
         String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
@@ -75,3 +81,4 @@ public class PokemonCollaborator {
     }
 
 }
+

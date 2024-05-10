@@ -31,12 +31,7 @@ public class PokemonServiceTest {
     @Test
     public void givenMockingIsDone_whenGetPokemonIsCalled_ShouldReturnPokemon() throws Exception {
         String idOrName = "pikachu";
-        Pokemon expectedPokemon = new Pokemon();
-        expectedPokemon.setName("pikachu");
-        expectedPokemon.setId(150);
-        expectedPokemon.setHeight(4);
-        expectedPokemon.setWeight(60);
-        expectedPokemon.setBase_experience(150);
+        Pokemon expectedPokemon = Pokemon.builder().id(1).name("pikachu").build();
 
         Mockito
                 .when(pokemonCollaborator.getPokemonByNameOrID(idOrName))

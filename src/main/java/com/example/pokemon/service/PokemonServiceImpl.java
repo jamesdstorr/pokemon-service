@@ -9,10 +9,11 @@ import com.example.pokemon.model.Pokemon;
 
 @Service
 public class PokemonServiceImpl implements PokemonService {
-
+    
+    @Autowired
     private PokemonCollaborator pokemonCollab;
 
-    @Autowired
+   
     public PokemonServiceImpl(PokemonCollaborator pokemonCollab){
         this.pokemonCollab = pokemonCollab;
     }
