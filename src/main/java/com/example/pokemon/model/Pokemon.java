@@ -13,5 +13,5 @@ public class Pokemon {
     private int height;
     private int weight;
     private int base_experience;
-    private List<AbilityItem> abilities;
+    private List<Ability> abilities;
 }

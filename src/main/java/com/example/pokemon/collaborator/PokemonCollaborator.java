@@ -1,7 +1,9 @@
 package com.example.pokemon.collaborator;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -20,29 +22,6 @@ public class PokemonCollaborator {
         this.restTemplate = restTemplate;
     }
 
-    private Optional<EvolutionPokemonSpecies> getNextEvolution(String pokemonName, EvolvesTo evolvesTo) {
-        if(evolvesTo.getEvolves_to().isEmpty()){
-            return Optional.empty();
-        }
-        if (evolvesTo.getSpecies() != null &&
-                evolvesTo.getSpecies().getName().equalsIgnoreCase(pokemonName)) {
-            return evolvesTo.getEvolves_to().stream()
-                    .findFirst()
-                    .map(EvolvesTo::getSpecies)
-                    .map(Optional::ofNullable)
-                    .orElse(Optional.empty());
-        } else {
-            return evolvesTo.getEvolves_to().stream()
-                    .map(nextEvolvesTo -> {                        
-                        return getNextEvolution(pokemonName, nextEvolvesTo);
-                    })
-                    .filter(Optional::isPresent)
-                    .findFirst()
-                    .flatMap(Function.identity());
-        }
-
-    }
-
     // Get Pokemon by ID or Name
     public Pokemon getPokemonByNameOrID(String idOrName) {
         String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
@@ -50,25 +29,49 @@ public class PokemonCollaborator {
     }
 
     // Get Evolutions of a Pokemon
-    public Pokemon evolvePokemon(String idOrName) {
+    public List<Pokemon> evolvePokemon(String idOrName) {
 
         PokemonSpecies pokemonSpecies = restTemplate
                 .getForObject("https://pokeapi.co/api/v2/pokemon-species/" + idOrName, PokemonSpecies.class);
+        if (pokemonSpecies == null)
+            return Collections.emptyList();
 
         EvolutionResponse evolutionResponse = restTemplate.getForObject(pokemonSpecies.getEvolution_chain().getUrl(),
                 EvolutionResponse.class);
+        if (evolutionResponse == null)
+            return Collections.emptyList();
 
         if (evolutionResponse.getChain().getSpecies().getName().equals(pokemonSpecies.getName())) {
-            EvolutionPokemonSpecies nextEvolution = evolutionResponse.getChain().getEvolves_to().get(0).getSpecies();
-            return getPokemonByNameOrID(nextEvolution.getName());
+            return evolutionResponse.getChain().getEvolves_to().stream()
+                    .map(EvolvesTo::getSpecies)
+                    .map(EvolutionPokemonSpecies::getName)
+                    .map(this::getPokemonByNameOrID)
+                    .collect(Collectors.toList());
+
         } else {
-            return evolutionResponse.getChain().getEvolves_to().stream()                    
-                    .map(nextEvolution -> getNextEvolution(pokemonSpecies.getName(),nextEvolution))
+            for (EvolvesTo evolvesTo : evolutionResponse.getChain().getEvolves_to())
+                if (evolvesTo != null)
+                    return findEvolutionStage(pokemonSpecies.getName(), evolvesTo).orElse(Collections.emptyList())
+                            .stream()
+                            .map(EvolvesTo::getSpecies)
+                            .map(EvolutionPokemonSpecies::getName)
+                            .map(this::getPokemonByNameOrID)
+                            .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    private Optional<List<EvolvesTo>> findEvolutionStage(String name, EvolvesTo currentLevel) {
+        if (currentLevel.getSpecies().getName().equals(name)) {
+            return Optional.ofNullable(currentLevel.getEvolves_to());
+        } else {
+            return currentLevel.getEvolves_to().stream()
+                    .map(evolvesTo -> findEvolutionStage(name, evolvesTo))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .map(evolutionPokemonSpecies -> getPokemonByNameOrID(evolutionPokemonSpecies.getName()))                    
-                    .findFirst()
-                    .orElse(null);
+                    .findFirst();
+
         }
     }
+
 }

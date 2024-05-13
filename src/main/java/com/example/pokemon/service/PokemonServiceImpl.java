@@ -1,5 +1,7 @@
 package com.example.pokemon.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +24,7 @@ public class PokemonServiceImpl implements PokemonService {
         return pokemonCollab.getPokemonByNameOrID(name);
     }
 
-    public Pokemon evolvePokemon(String name){
+    public List<Pokemon> evolvePokemon(String name){
         return pokemonCollab.evolvePokemon(name);
     }
 }

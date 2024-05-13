@@ -1,5 +1,7 @@
 package com.example.pokemon.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,20 +38,10 @@ public class PokemonController {
         return ResponseEntity.ok(pokemon); // Returns a ResponseEntity with an HTTP status code of 200 (OK) and a response body containing the Pokemon object.
     }
 
-   @PostMapping("/pokemon/evolve/{name}")
-    public ResponseEntity<String> getPokemonEvolution(@PathVariable("name") String name) {
-        Pokemon pokemon = pokemonService.evolvePokemon(name); // Declares a local variable pokemon of type Pokemon within the getPokemonByName() method.
-        if (pokemon == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Evolution for " + name + " not found.");
-        } else {
-            try {
-                String pokemonJson = objectMapper.writeValueAsString(pokemon);
-                return ResponseEntity.ok(pokemonJson);
-            } catch (JsonProcessingException e) {
-                // Handle JSON processing exception
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing Pokémon data.");
-            }
-        }
+   @GetMapping("/pokemon/evolve/{name}")
+    public ResponseEntity<List<Pokemon>> getPokemonEvolution(@PathVariable("name") String name) {
+        List<Pokemon> pokemon = pokemonService.evolvePokemon(name); // Declares a local variable pokemon of type Pokemon within the getPokemonByName() method.
+        return ResponseEntity.ok().body(pokemon);  
     }
 
 }
