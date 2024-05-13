@@ -2,6 +2,9 @@ package com.example.pokemon;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +25,7 @@ public class PokemonServiceTest {
 
     @InjectMocks
     private PokemonServiceImpl pokemonService;
-  
+
     @Before
     public void setup() {
         MockitoAnnotations.openMocks(this);
@@ -38,6 +41,23 @@ public class PokemonServiceTest {
                 .thenReturn(expectedPokemon);
 
         assertEquals(expectedPokemon.getName(), pokemonService.getPokemon(idOrName).getName());
+    }
+
+    @Test
+    public void testEvolvePokemon() throws Exception {
+
+        // Given
+        String idOrName = "pikachu";
+        List<Pokemon> expectedEvolvedPokemons = new ArrayList<Pokemon>();
+        expectedEvolvedPokemons.add(Pokemon.builder().id(2).name("raichu").build());
+
+        // When
+        Mockito
+                .when(pokemonCollaborator.evolvePokemon(idOrName))
+                .thenReturn(expectedEvolvedPokemons);
+
+        // Then
+        assertEquals(expectedEvolvedPokemons.get(0).getName(),pokemonService.evolvePokemon(idOrName).get(0).getName());
     }
 
 }
