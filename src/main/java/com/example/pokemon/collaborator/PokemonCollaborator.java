@@ -1,5 +1,8 @@
 package com.example.pokemon.collaborator;
 
+import java.util.Optional;
+import java.util.function.Function;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,27 +20,36 @@ public class PokemonCollaborator {
         this.restTemplate = restTemplate;
     }
 
-    private EvolutionPokemonSpecies getNextEvolution(String pokemonName, EvolvesTo evolvesTo) {
-        if (evolvesTo.getSpecies() != null && evolvesTo.getSpecies().getName().equalsIgnoreCase(pokemonName)) {
+    private Optional<EvolutionPokemonSpecies> getNextEvolution(String pokemonName, EvolvesTo evolvesTo) {
+        if(evolvesTo.getEvolves_to().isEmpty()){
+            return Optional.empty();
+        }
+        if (evolvesTo.getSpecies() != null &&
+                evolvesTo.getSpecies().getName().equalsIgnoreCase(pokemonName)) {
             return evolvesTo.getEvolves_to().stream()
                     .findFirst()
                     .map(EvolvesTo::getSpecies)
-                    .orElse(null);
+                    .map(Optional::ofNullable)
+                    .orElse(Optional.empty());
         } else {
             return evolvesTo.getEvolves_to().stream()
-                    .map(nextEvolvesTo -> {
+                    .map(nextEvolvesTo -> {                        
                         return getNextEvolution(pokemonName, nextEvolvesTo);
                     })
+                    .filter(Optional::isPresent)
                     .findFirst()
-                    .orElse(null);
+                    .flatMap(Function.identity());
         }
+
     }
 
+    // Get Pokemon by ID or Name
     public Pokemon getPokemonByNameOrID(String idOrName) {
         String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
         return restTemplate.getForObject(url, Pokemon.class);
     }
 
+    // Get Evolutions of a Pokemon
     public Pokemon evolvePokemon(String idOrName) {
 
         PokemonSpecies pokemonSpecies = restTemplate
@@ -46,21 +58,17 @@ public class PokemonCollaborator {
         EvolutionResponse evolutionResponse = restTemplate.getForObject(pokemonSpecies.getEvolution_chain().getUrl(),
                 EvolutionResponse.class);
 
-        if (evolutionResponse != null
-                && evolutionResponse.getChain().getSpecies().getName().equals(pokemonSpecies.getName())) {
+        if (evolutionResponse.getChain().getSpecies().getName().equals(pokemonSpecies.getName())) {
             EvolutionPokemonSpecies nextEvolution = evolutionResponse.getChain().getEvolves_to().get(0).getSpecies();
             return getPokemonByNameOrID(nextEvolution.getName());
         } else {
-            if (evolutionResponse.getChain().getEvolves_to() != null) {
-                EvolutionPokemonSpecies nextEvolution = getNextEvolution(pokemonSpecies.getName(),
-                        evolutionResponse.getChain().getEvolves_to().get(0));
-                if (nextEvolution != null) {
-                    return getPokemonByNameOrID(nextEvolution.getName());
-                }
-                return null;
-            } else {
-                return null;
-            }
+            return evolutionResponse.getChain().getEvolves_to().stream()                    
+                    .map(nextEvolution -> getNextEvolution(pokemonSpecies.getName(),nextEvolution))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(evolutionPokemonSpecies -> getPokemonByNameOrID(evolutionPokemonSpecies.getName()))                    
+                    .findFirst()
+                    .orElse(null);
         }
     }
 }
