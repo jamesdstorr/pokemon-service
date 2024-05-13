@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.pokemon.model.Pokemon;
@@ -22,43 +23,52 @@ public class PokemonCollaborator {
         this.restTemplate = restTemplate;
     }
 
-    // Get Pokemon by ID or Name
     public Pokemon getPokemonByNameOrID(String idOrName) {
-        String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
-        return restTemplate.getForObject(url, Pokemon.class);
+        try {
+            String url = "https://pokeapi.co/api/v2/pokemon/" + idOrName;
+            return restTemplate.getForObject(url, Pokemon.class);
+        } catch (HttpClientErrorException.NotFound e) {
+            System.err.println("Pokemon not found");
+            return null;
+        }
     }
 
-    // Get Evolutions of a Pokemon
     public List<Pokemon> evolvePokemon(String idOrName) {
+        try {
+            PokemonSpecies pokemonSpecies = restTemplate
+                    .getForObject("https://pokeapi.co/api/v2/pokemon-species/" + idOrName, PokemonSpecies.class);
 
-        PokemonSpecies pokemonSpecies = restTemplate
-                .getForObject("https://pokeapi.co/api/v2/pokemon-species/" + idOrName, PokemonSpecies.class);
-        if (pokemonSpecies == null)
+                    if(pokemonSpecies == null)return Collections.emptyList();
+
+            EvolutionResponse evolutionResponse = restTemplate.getForObject(
+                    pokemonSpecies.getEvolution_chain().getUrl(),
+                    EvolutionResponse.class);
+            if (evolutionResponse == null)
+                return Collections.emptyList();
+
+            if (evolutionResponse.getChain().getSpecies().getName().equals(pokemonSpecies.getName())) {
+                return evolutionResponse.getChain().getEvolves_to().stream()
+                        .map(EvolvesTo::getSpecies)
+                        .map(EvolutionPokemonSpecies::getName)
+                        .map(this::getPokemonByNameOrID)
+                        .collect(Collectors.toList());
+
+            } else {
+                for (EvolvesTo evolvesTo : evolutionResponse.getChain().getEvolves_to())
+                    if (evolvesTo != null)
+                        return findEvolutionStage(pokemonSpecies.getName(), evolvesTo).orElse(Collections.emptyList())
+                                .stream()
+                                .map(EvolvesTo::getSpecies)
+                                .map(EvolutionPokemonSpecies::getName)
+                                .map(this::getPokemonByNameOrID)
+                                .collect(Collectors.toList());
+            }
             return Collections.emptyList();
-
-        EvolutionResponse evolutionResponse = restTemplate.getForObject(pokemonSpecies.getEvolution_chain().getUrl(),
-                EvolutionResponse.class);
-        if (evolutionResponse == null)
+        } catch (HttpClientErrorException.NotFound e) {
+            System.err.println("Pokemon not found");
             return Collections.emptyList();
-
-        if (evolutionResponse.getChain().getSpecies().getName().equals(pokemonSpecies.getName())) {
-            return evolutionResponse.getChain().getEvolves_to().stream()
-                    .map(EvolvesTo::getSpecies)
-                    .map(EvolutionPokemonSpecies::getName)
-                    .map(this::getPokemonByNameOrID)
-                    .collect(Collectors.toList());
-
-        } else {
-            for (EvolvesTo evolvesTo : evolutionResponse.getChain().getEvolves_to())
-                if (evolvesTo != null)
-                    return findEvolutionStage(pokemonSpecies.getName(), evolvesTo).orElse(Collections.emptyList())
-                            .stream()
-                            .map(EvolvesTo::getSpecies)
-                            .map(EvolutionPokemonSpecies::getName)
-                            .map(this::getPokemonByNameOrID)
-                            .collect(Collectors.toList());
         }
-        return Collections.emptyList();
+
     }
 
     private Optional<List<EvolvesTo>> findEvolutionStage(String name, EvolvesTo currentLevel) {
